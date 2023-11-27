@@ -10,20 +10,31 @@ INTERFACE
 
 Procedure BackgroundTextHighIntensity;
 Procedure BarCharHori(X1,Y,X2:Byte;Chr:Char);
+Procedure BarTextHori(X1,Y,X2:Byte;Chr:Char;Color:Byte);
 Procedure ClearLineAt(Y,X2:Byte;Chr:Char;Color:Byte);
 Procedure ClearWindow(X1,Y1,X2,Y2,Color:Byte);
 Procedure CursorOff;
 Procedure CursorOn;
 Function  EnhancedGraphicsAdapterPresent:Byte;
+Procedure FillBox(X1,Y1,X2,Y2:Byte;Chr:Char;Color:Byte);
 Function  GetAttr(X,Y,Page:Byte):Byte;
+Function  GetBlinkControl:Boolean;
 Function  GetChar(X,Y,Page:Byte):Char;
+Function  GetHeightChar:Byte;
+Function  GetNumColor:Word;
+Function  GetNumPage:Byte;
 Procedure GetPosCursor(Var X,Y:Byte;Page:Byte);
+Function  GetScanLine:Word;
 Function  GetVideoCard:Word;
+Function  GetVideoInfo(Var Buffer):Boolean;
 Function  GetVideoMode:Byte;
 Function  MonochromePresent:Byte;
+Procedure PutBox(X1,Y1,X2,Y2:Byte;Var Buffer);
 Procedure PutChar(X,Y,Page:Byte;Character:Char);
 Procedure PutCharType(X,Y:Byte;Chr:Char;Color:Byte;Fond:Boolean);
+Procedure SaveBox(X1,Y1,X2,Y2:Byte;Var Buffer);
 Procedure ScrollUp(X1,Y1,X2,Y2,Color:Byte);
+Procedure SetCube(X,Y:Byte;Chr:Char;Color:Byte);
 Procedure SetCursor(Start,Finish:Byte);
 Procedure SetPosCursor(X,Y,Page:Byte);
 Procedure SetVideoMode(Mode:Byte);
@@ -31,6 +42,9 @@ Procedure SetVideoMode(Mode:Byte);
 IMPLEMENTATION
 
 Uses DOS;
+
+Type
+ TByte=Array[0..32000]of Byte;
 
 Procedure BackgroundTextHighIntensity;
 Var
@@ -310,5 +324,144 @@ Begin
  Intr($10,Regs);
 End;
 
+Procedure SetCube(X,Y:Byte;Chr:Char;Color:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$02;
+ Regs.BH:=0;
+ Regs.DL:=X;
+ Regs.DH:=Y;
+ Intr($10,Regs);
+ Regs.AH:=9;
+ Regs.AL:=Byte(Chr);
+ Regs.BL:=Color;
+ Regs.CX:=1;
+ Intr($10,Regs);
+End;
+
+Procedure SaveBox(X1,Y1,X2,Y2:Byte;Var Buffer);
+Var
+ I,J,XS,YS:Byte;
+ TBuffer:^TByte;
+Begin
+ XS:=(X2-X1);
+ YS:=(Y2-Y1);
+ TBuffer:=@Buffer;
+ For J:=0 to YS do Begin
+  For I:=0 to XS do Begin
+   TBuffer^[(((XS+1)*J)+I) shl 1]:=Byte(GetChar(X1+I,Y1+J,0));
+   TBuffer^[((((XS+1)*J)+I) shl 1)+1]:=GetAttr(X1+I,Y1+J,0);
+  End;
+ End;
+End;
+
+Procedure PutBox(X1,Y1,X2,Y2:Byte;Var Buffer);
+Var
+ I,J,XS,YS:Byte;
+ TBuffer:^TByte;
+Begin
+ XS:=(X2-X1);
+ YS:=(Y2-Y1);
+ TBuffer:=@Buffer;
+ For J:=0 to YS do Begin
+  For I:=0 to XS do  Begin
+   SetCube(X1+I,Y1+J,Char(TBuffer^[(((XS+1)*J)+I) shl 1]),
+                          TBuffer^[((((XS+1)*J)+I) shl 1)+1]);
+  End;
+ End;
+End;
+
+Procedure FillBox(X1,Y1,X2,Y2:Byte;Chr:Char;Color:Byte);
+Var
+ I:Byte;
+Begin
+ For I:=Y1 to Y2 do BarTextHori(X1,I,X2,Chr,Color);
+End;
+
+Function GetVideoInfo(Var Buffer):Boolean;
+Var
+ Regs:Registers;
+Begin
+ Regs.ES:=Seg(Buffer);
+ Regs.DI:=Ofs(Buffer);
+ Regs.AH:=$1B;
+ Regs.BX:=0;
+ Intr($10,Regs);
+ GetVideoInfo:=Regs.AL=$1B;
+End;
+
+Function GetBlinkControl:Boolean;
+Var
+ Table:Array[0..31] of Word;
+ Results:Boolean;
+Begin
+ {$IFDEF FPC}
+  GetBlinkControl:=False;
+ {$ELSE}
+  Results:=GetVideoInfo(Table);
+  GetBLinkControl:=Boolean((Mem[Table[1]:Table[0]+$0B]shr 2)and 1);
+ {$ENDIF}
+End;
+
+Function GetHeightChar:Byte;
+Var
+ Table:Array[0..63]of Byte;
+Begin
+ {$IFDEF FPC}
+  GetHeightChar:=25;
+ {$ELSE}
+  If(GetVideoInfo(Table))Then GetHeightChar:=(Table[$24] shl 8)+Table[$23]
+ 	                 Else GetHeightChar:=0
+ {$ENDIF}
+End;
+
+Function GetNumColor:Word;
+Var
+ Table:Array[0..63] of Byte;
+Begin
+ {$IFDEF FPC}
+  GetNumColor:=16;
+ {$ELSE}
+  If(GetVideoInfo(Table))Then GetNumColor:=(Table[$28] shl 8)+Table[$27]
+                         Else GetNumColor:=0
+ {$ENDIF}
+End;
+
+Function GetNumPage:Byte;
+Var
+ Table:Array[0..63] of Byte;
+Begin
+ {$IFDEF FPC}
+  GetNumPage:=1;
+ {$ELSE}
+  If(GetVideoInfo(Table))Then GetNumPage:=Table[$29]
+ 		         Else GetNumPage:=1;
+ {$ENDIF}
+End;
+
+Function GetScanLine:Word;
+Var
+ Table:Array[0..63] of Byte;
+ Results:Byte;
+Begin
+ {$IFDEF FPC}
+  GetScanLine:=0;
+ {$ELSE}
+  If(GetVideoInfo(Table))Then Results:=Table[$2A]
+                         Else Results:=0;
+  Case Results of
+   0:GetScanLine:=200;
+   1:GetScanLine:=350;
+   2:GetScanLine:=400;
+   3:GetScanLine:=480;
+   5:GetScanLine:=600;
+   6:GetScanLine:=768;
+   8:GetScanLine:=352;
+   9:GetScanLine:=364;
+   Else GetScanLine:=0;
+  End;
+ {$ENDIF}
+End;
 
 END.
