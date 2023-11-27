@@ -11,6 +11,7 @@ INTERFACE
 Function _BIOSKEY(Flag:Integer):Integer;
 Function  GetModeInsert:Boolean;
 Function  KeyFlags:Byte;
+Function  IsCtrlLetterCode(Code:Word):Boolean;
 Function  NextKey:Word;
 Procedure PushKey(Key:Word);
 Function  ReadKey:Word;
@@ -122,5 +123,14 @@ Begin
  ReadKeyAT:=Regs.AX;
 End;
 
+Function IsCtrlLetterCode(Code:Word):Boolean;
+Const
+ ShiftCode:Array['A'..'Z'] of Byte=(
+  30,48,46,32,18,33,34,35,23,36,37,38,50,
+  49,24,25,16,19,31,20,22,47,17,45,21,44);
+Begin
+ IsCtrlLetterCode:=(Lo(Code) in [1..26])and
+                   (Hi(Code)=ShiftCode[Char(Lo(Code)+64)]);
+End;
 
 END.
