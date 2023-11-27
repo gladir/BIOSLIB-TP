@@ -78,38 +78,29 @@ Begin
 End;
 
 Function SetAPMMode(Mode:Word):Boolean;
-{$IFDEF FPC}
- Begin
-  WriteLn('Non implement‚');
-  SetAPMMode:=False;
- End;
-{$ELSE}
- Assembler;ASM
-   { Connecter l'interface RM }
-  MOV AX,5301h
-  XOR BX,BX
-  INT 15h
-   { Active le pilote APM 1.1 }
-  MOV AX,530Eh
-  XOR BX,BX
-  MOV CX,0101h
-  INT 15h
+Var
+ Regs:Registers;
+Begin
+ { Connecter l'interface RM }
+ Regs.AX:=$5301;
+ Regs.BX:=0;
+ Intr($15,Regs);
+  { Active le pilote APM 1.1 }
+ Regs.AX:=$530E;
+ Regs.BX:=0;
+ Regs.CX:=$0101;
+ Intr($15,Regs);
    { Active l'APM }
-  MOV AX,5308h
-  MOV BX,1
-  MOV CX,BX
-  INT 15h
+ Regs.AX:=$5308;
+ Regs.BX:=1;
+ Regs.CX:=1;
+ Intr($15,Regs);
    { Demande la mode sp‚cifier }
-  MOV AX,5307h
-  mov BX,1
-  MOV CX,Mode
-  INT 15h
-  MOV AL,0
-  JC  @Error
-  MOV AL,True
-@Error:
-@End:
- END;
-{$ENDIF}
+ Regs.AX:=$5307;
+ Regs.BX:=1;
+ Regs.CX:=Mode;
+ Intr($15,Regs);
+ SetAPMMode:=Regs.Flags and 1=1;
+End;
 
 END.
