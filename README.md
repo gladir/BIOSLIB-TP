@@ -47,3 +47,8 @@ Voici la liste des différentes unités proposés dans la bibliothèque «BIOSLI
     <td>Cette unité contient les routines de manipulation de la vidéo.</td>
   </tr>
 </table>
+
+<h3>Remarque</h3>
+<ul>
+  <li>Par souci de compatibilité, ces unités ont été développé sans utilisé de langage de programmation assembleur, mais uniquement des instructions Intr proposé avec l'unité DOS fournit en standard dans Turbo Pascal, QuickPascal ou Free Pascal.</li>
+</ul>
