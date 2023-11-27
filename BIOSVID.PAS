@@ -9,11 +9,22 @@ Unit BIOSVID;
 INTERFACE
 
 Procedure BackgroundTextHighIntensity;
+Procedure ClearWindow(X1,Y1,X2,Y2,Color:Byte);
 Procedure CursorOff;
 Procedure CursorOn;
 Function  EnhancedGraphicsAdapterPresent:Byte;
+Function  GetAttr(X,Y,Page:Byte):Byte;
+Function  GetChar(X,Y,Page:Byte):Char;
+Procedure GetPosCursor(Var X,Y:Byte;Page:Byte);
 Function  GetVideoCard:Word;
+Function  GetVideoMode:Byte;
 Function  MonochromePresent:Byte;
+Procedure PutChar(X,Y,Page:Byte;Character:Char);
+Procedure PutCharType(X,Y:Byte;Chr:Char;Color:Byte;Fond:Boolean);
+Procedure ScrollUp(X1,Y1,X2,Y2,Color:Byte);
+Procedure SetCursor(Start,Finish:Byte);
+Procedure SetPosCursor(X,Y,Page:Byte);
+Procedure SetVideoMode(Mode:Byte);
 
 IMPLEMENTATION
 
@@ -68,5 +79,177 @@ Function EnhancedGraphicsAdapterPresent:Byte;Begin
  If((GetVideoCard and $FF)in[$04,$05,$06,$08,$0A,$0C])or
    ((GetVideoCard shr 8)in[$04,$05,$06,$08,$0A,$0C])Then EnhancedGraphicsAdapterPresent:=1
 End;
+
+Procedure PutCharType(X,Y:Byte;Chr:Char;Color:Byte;Fond:Boolean);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$02;
+ Regs.BH:=0;
+ Regs.DL:=X;
+ Regs.DH:=Y;
+ Intr($10,Regs);
+ Regs.AH:=$0E;
+ Regs.AL:=(Byte(Fond) shl 7) or Byte(Chr);
+ Regs.BL:=Color;
+ Intr($10,Regs);
+End;
+
+Procedure SetVideoMode(Mode:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AL:=Mode;
+ Regs.AH:=0;
+ Intr($10,Regs);
+End;
+
+Procedure SetCursor(Start,Finish:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.CL:=Finish;
+ Regs.CH:=Start;
+ Regs.AH:=$01;
+ Intr($10,Regs);
+End;
+
+Procedure SetPosCursor(X,Y,Page:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$02;
+ Regs.DL:=X;
+ Regs.DH:=Y;
+ Regs.BH:=Page;
+ Intr($10,Regs);
+End;
+
+Procedure GetPosCursor(Var X,Y:Byte;Page:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$03;
+ Regs.BH:=Page;
+ Intr($10,Regs);
+ X:=Regs.DL;
+ Y:=Regs.DH;
+End;
+
+Procedure PutChar(X,Y,Page:Byte;Character:Char);
+Var
+ Regs:Registers;
+Begin
+ SetPosCursor(X,Y,Page);
+ Regs.AH:=$0A;
+ Regs.AL:=Byte(Character);
+ Regs.BX:=$0F;
+ Regs.CX:=$01;
+ Intr($10,Regs);
+End;
+
+Procedure ScrollUp(X1,Y1,X2,Y2,Color:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AX:=$0601;
+ Regs.BH:=Color;
+ Regs.CL:=X1;
+ Regs.CH:=Y1;
+ Regs.DL:=X2;
+ Regs.DH:=Y2;
+ Intr($10,Regs);
+End;
+
+Procedure ScrollDown(X1,Y1,X2,Y2,Num,Color:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$07;
+ Regs.AL:=Num;
+ Regs.BH:=Color;
+ Regs.CL:=X1;
+ Regs.CH:=Y1;
+ Regs.DL:=X2;
+ Regs.DH:=Y2;
+ Intr($10,Regs);
+End;
+
+Function GetAttr(X,Y,Page:Byte):Byte;
+Var
+ Regs:Registers;
+ Data:Word;
+Begin
+ Regs.AH:=$03;
+ Regs.BH:=Page;
+ Intr($10,Regs);
+ Data:=Regs.DX;
+ SetPosCursor(X,Y,Page);
+ Regs.AH:=$08;
+ Intr($10,Regs);
+ GetAttr:=Regs.AH;
+ Regs.AH:=$02;
+ Regs.DX:=Data;
+ Intr($10,Regs);
+End;
+
+Function GetChar(X,Y,Page:Byte):Char;
+Var
+ Regs:Registers;
+ Data:Word;
+Begin
+ Regs.AH:=$03;
+ Regs.BH:=Page;
+ Intr($10,Regs);
+ Data:=Regs.DX;
+ SetPosCursor(X,Y,Page);
+ Regs.AH:=$08;
+ Intr($10,Regs);
+ GetChar:=Char(Regs.AL);
+ Regs.AH:=$02;
+ Regs.DX:=Data;
+ Intr($10,Regs);
+End;
+
+Function GetColums:Byte;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$0F;
+ Intr($10,Regs);
+ GetColums:=Regs.AH;
+End;
+
+Function GetPage:Byte;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$0F;
+ Intr($10,Regs);
+ GetPage:=Regs.BH;
+End;
+
+Function GetVideoMode:Byte;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$0F;
+ Intr($10,Regs);
+ GetVideoMode:=Regs.AL;
+End;
+
+Procedure ClearWindow(X1,Y1,X2,Y2,Color:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AX:=$0600;
+ Regs.BH:=Color;
+ Regs.CL:=X1;
+ Regs.CH:=Y1;
+ Regs.DL:=X2;
+ Regs.DH:=Y2;
+ Intr($10,Regs);
+End;
+
 
 END.
