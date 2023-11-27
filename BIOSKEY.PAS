@@ -8,21 +8,26 @@ Unit BIOSKEY;
 
 INTERFACE
 
-Function  BIOSKey(Flag:Integer):Integer;
+Function _BIOSKEY(Flag:Integer):Integer;
+Function  GetModeInsert:Boolean;
+Function  KeyFlags:Byte;
+Function  NextKey:Word;
+Procedure PushKey(Key:Word);
 Function  ReadKey:Word;
+Function  ReadKeyAT:Word;
 Procedure SetKeyRate(Rate,Delay:Word);
 
 IMPLEMENTATION
 
 Uses DOS;
 
-Function BIOSKey(Flag:Integer):Integer;
+Function _BIOSKEY(Flag:Integer):Integer;
 Var
  Regs:Registers;
 Begin
  Regs.AX:=Flag;
  Intr($16,Regs);
- BIOSKey:=Regs.AX;
+ _BIOSKEY:=Regs.AX;
 End;
 
 Function ReadKey:Word;
@@ -71,5 +76,51 @@ Begin
  End;
  Intr($16,Regs);
 End;
+
+Function GetModeInsert:Boolean;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$02;
+ Intr($16,Regs);
+ GetModeInsert:=Boolean((Regs.AL shr 7)and 1);
+End;
+
+Procedure PushKey(Key:Word);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$05;
+ Regs.CX:=Key;
+ Intr($16,Regs);
+End;
+
+Function KeyFlags:Byte;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=02;
+ Intr($16,Regs);
+ KeyFlags:=Regs.AL;
+End;
+
+Function NextKey:Word;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$01;
+ Intr($16,Regs);
+ NextKey:=Regs.AX;
+END;
+
+Function ReadKeyAT:Word;
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=$10;
+ Intr($16,Regs);
+ ReadKeyAT:=Regs.AX;
+End;
+
 
 END.
