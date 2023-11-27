@@ -9,6 +9,8 @@ Unit BIOSVID;
 INTERFACE
 
 Procedure BackgroundTextHighIntensity;
+Procedure BarCharHori(X1,Y,X2:Byte;Chr:Char);
+Procedure ClearLineAt(Y,X2:Byte;Chr:Char;Color:Byte);
 Procedure ClearWindow(X1,Y1,X2,Y2,Color:Byte);
 Procedure CursorOff;
 Procedure CursorOn;
@@ -248,6 +250,63 @@ Begin
  Regs.CH:=Y1;
  Regs.DL:=X2;
  Regs.DH:=Y2;
+ Intr($10,Regs);
+End;
+
+Procedure ClearLineAt(Y,X2:Byte;Chr:Char;Color:Byte);
+Var
+ Regs:Registers;
+Begin
+ Regs.AH:=2;
+ Regs.BH:=0;
+ Regs.DL:=0;
+ Regs.DH:=Y;
+ Intr($10,Regs);
+ Regs.AH:=9;
+ Regs.AL:=Byte(Chr);
+ Regs.BL:=Color;
+ Regs.CL:=X2;
+ Regs.CH:=0;
+ Intr($10,Regs);
+End;
+
+Procedure BarCharHori(X1,Y,X2:Byte;Chr:Char);
+Var
+ Regs:Registers;
+Begin
+ Regs.CL:=X2-X1;
+ Regs.CH:=0;
+ Inc(Regs.CX);
+ Regs.AH:=2;
+ Regs.BH:=0;
+ Regs.DL:=X1;
+ Regs.DH:=Y;
+ Intr($10,Regs);
+ Regs.AH:=$0A;
+ Regs.AL:=Byte(Chr);
+ Regs.BL:=15;
+ Intr($10,Regs);
+End;
+
+Procedure BarTextHori(X1,Y,X2:Byte;Chr:Char;Color:Byte);
+Var
+ Regs:Registers;
+ X:Byte;
+Begin
+ If(X1>X2)Then Begin
+  X:=X1;
+  X1:=X2;
+  X2:=X;
+ End;
+ Regs.CX:=X2-X1+1;
+ Regs.AH:=2;
+ Regs.BH:=0;
+ Regs.DL:=X1;
+ Regs.DH:=Y;
+ Intr($10,Regs);
+ Regs.AH:=9;
+ Regs.AL:=Byte(Chr);
+ Regs.BL:=Color;
  Intr($10,Regs);
 End;
 
