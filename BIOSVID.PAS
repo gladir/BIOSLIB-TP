@@ -36,6 +36,7 @@ Procedure SaveBox(X1,Y1,X2,Y2:Byte;Var Buffer);
 Procedure ScrollUp(X1,Y1,X2,Y2,Color:Byte);
 Procedure SetCube(X,Y:Byte;Chr:Char;Color:Byte);
 Procedure SetCursor(Start,Finish:Byte);
+Procedure SetMatrix(Palette,Height:Byte;Number,Start:Word;Var Buffer);
 Procedure SetPosCursor(X,Y,Page:Byte);
 Procedure SetVideoMode(Mode:Byte);
 
@@ -463,5 +464,20 @@ Begin
   End;
  {$ENDIF}
 End;
+
+Procedure SetMatrix(Palette,Height:Byte;Number,Start:Word;Var Buffer);
+Var
+ Regs:Registers;
+Begin
+ Regs.AX:=$1100;
+ Regs.BL:=Palette;
+ Regs.BH:=Height;
+ Regs.DX:=Start;
+ Regs.CX:=Number;
+ Regs.ES:=Seg(Buffer);
+ Regs.BP:=Ofs(Buffer);
+ Intr($10,Regs);
+End;
+
 
 END.
