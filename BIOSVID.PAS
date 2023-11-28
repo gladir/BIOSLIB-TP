@@ -39,6 +39,7 @@ Procedure SetCursor(Start,Finish:Byte);
 Procedure SetMatrix(Palette,Height:Byte;Number,Start:Word;Var Buffer);
 Procedure SetPosCursor(X,Y,Page:Byte);
 Procedure SetVideoMode(Mode:Byte);
+Procedure Set80x50Text;
 
 IMPLEMENTATION
 
@@ -479,5 +480,13 @@ Begin
  Intr($10,Regs);
 End;
 
+Procedure Set80x50Text;
+Var
+ Regs:Registers;
+Begin
+ Regs.AX:=$1112;
+ Regs.BX:=0;
+ Intr($10,Regs);
+End;
 
 END.
