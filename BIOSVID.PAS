@@ -33,6 +33,7 @@ Procedure PutBox(X1,Y1,X2,Y2:Byte;Var Buffer);
 Procedure PutChar(X,Y,Page:Byte;Character:Char);
 Procedure PutCharType(X,Y:Byte;Chr:Char;Color:Byte;Fond:Boolean);
 Procedure SaveBox(X1,Y1,X2,Y2:Byte;Var Buffer);
+Procedure ScrollDown(X1,Y1,X2,Y2,Num,Color:Byte);
 Procedure ScrollUp(X1,Y1,X2,Y2,Color:Byte);
 Procedure SetCube(X,Y:Byte;Chr:Char;Color:Byte);
 Procedure SetCursor(Start,Finish:Byte);
